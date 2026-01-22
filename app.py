@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.decomposition import PCA
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, ConfusionMatrixDisplay
 
 # -----------------------------
 # Title
@@ -19,14 +19,18 @@ st.title("📊 Loan Prediction using SVM")
 # -----------------------------
 df = pd.read_csv("train.csv")
 
-# ✅ ADD THIS BLOCK HERE
+# -----------------------------
+# Handle missing values
+# -----------------------------
 for col in df.columns:
     if df[col].dtype == "object":
         df[col] = df[col].fillna(df[col].mode()[0])
     else:
         df[col] = df[col].fillna(df[col].median())
 
-# then encoding
+# -----------------------------
+# Encode categorical columns
+# -----------------------------
 for col in df.select_dtypes(include="object").columns:
     le = LabelEncoder()
     df[col] = le.fit_transform(df[col])
@@ -105,27 +109,40 @@ x_min, x_max = X_train_2d[:, 0].min() - 1, X_train_2d[:, 0].max() + 1
 y_min, y_max = X_train_2d[:, 1].min() - 1, X_train_2d[:, 1].max() + 1
 
 xx, yy = np.meshgrid(
-    np.linspace(x_min, x_max, 300),
-    np.linspace(y_min, y_max, 300)
+    np.linspace(x_min, x_max, 400),
+    np.linspace(y_min, y_max, 400)
 )
 
+# Decision regions
 Z = svm_vis.predict(np.c_[xx.ravel(), yy.ravel()])
 Z = Z.reshape(xx.shape)
 
 fig, ax = plt.subplots()
 ax.contourf(xx, yy, Z, alpha=0.2)
-ax.scatter(X_train_2d[:, 0], X_train_2d[:, 1], c=y_train, edgecolor="k")
+ax.scatter(
+    X_train_2d[:, 0],
+    X_train_2d[:, 1],
+    c=y_train,
+    edgecolor="k",
+    s=30
+)
+
+# -----------------------------
+# Hyperplane + margins (Linear only)
+# -----------------------------
+if kernel == "linear":
+    Z_df = svm_vis.decision_function(np.c_[xx.ravel(), yy.ravel()])
+    Z_df = Z_df.reshape(xx.shape)
+
+    ax.contour(
+        xx, yy, Z_df,
+        levels=[-1, 0, 1],
+        linestyles=["--", "-", "--"],
+        linewidths=2
+    )
+
 ax.set_xlabel("PCA Feature 1")
 ax.set_ylabel("PCA Feature 2")
 ax.set_title(f"SVM Decision Boundary ({kernel.upper()} Kernel)")
 
-# draw hyperplane only for linear
-if kernel == "linear":
-    w = svm_vis.coef_[0]
-    b = svm_vis.intercept_[0]
-    x_line = np.linspace(x_min, x_max)
-    y_line = -(w[0] * x_line + b) / w[1]
-    ax.plot(x_line, y_line)
-
 st.pyplot(fig)
-
