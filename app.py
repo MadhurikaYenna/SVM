@@ -17,11 +17,16 @@ st.title("📊 Loan Prediction using SVM")
 # -----------------------------
 # Load data
 # -----------------------------
-df = pd.read_csv("train.csv")   # change filename if needed
+df = pd.read_csv("train.csv")
 
-# -----------------------------
-# Encode categorical columns
-# -----------------------------
+# ✅ ADD THIS BLOCK HERE
+for col in df.columns:
+    if df[col].dtype == "object":
+        df[col] = df[col].fillna(df[col].mode()[0])
+    else:
+        df[col] = df[col].fillna(df[col].median())
+
+# then encoding
 for col in df.select_dtypes(include="object").columns:
     le = LabelEncoder()
     df[col] = le.fit_transform(df[col])
@@ -123,3 +128,4 @@ if kernel == "linear":
     ax.plot(x_line, y_line)
 
 st.pyplot(fig)
+
