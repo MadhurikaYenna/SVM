@@ -156,4 +156,5 @@ plot_decision_boundary(svm_poly, axes[1], "Polynomial SVM (deg=3) with Hyperplan
 plot_decision_boundary(svm_rbf, axes[2], "RBF SVM with Hyperplane")
 
 plt.tight_layout()
-plt.show()
+st.pyplot(fig)
+
