@@ -99,50 +99,61 @@ st.pyplot(fig_cm)
 # -----------------------------
 st.subheader("📈 SVM Visualization (PCA)")
 
+
+
+# --- PCA TO 2D ---
 pca = PCA(n_components=2)
 X_train_2d = pca.fit_transform(x_train)
+X_test_2d = pca.transform(x_test)
 
-svm_vis = SVC(kernel=kernel, C=1)
-svm_vis.fit(X_train_2d, y_train)
+# --- TRAIN MODELS ON 2D DATA ---
+svm_linear = SVC(kernel='linear', C=1)
+svm_linear.fit(X_train_2d, y_train)
 
-x_min, x_max = X_train_2d[:, 0].min() - 1, X_train_2d[:, 0].max() + 1
-y_min, y_max = X_train_2d[:, 1].min() - 1, X_train_2d[:, 1].max() + 1
+svm_poly = SVC(kernel='poly', degree=3, C=1)
+svm_poly.fit(X_train_2d, y_train)
 
-xx, yy = np.meshgrid(
-    np.linspace(x_min, x_max, 400),
-    np.linspace(y_min, y_max, 400)
-)
+svm_rbf = SVC(kernel='rbf', C=1, gamma='scale')
+svm_rbf.fit(X_train_2d, y_train)
 
-# Decision regions
-Z = svm_vis.predict(np.c_[xx.ravel(), yy.ravel()])
-Z = Z.reshape(xx.shape)
+# --- PLOTTING FUNCTION ---
+def plot_decision_boundary(model, ax, title):
+    x_min, x_max = X_train_2d[:, 0].min() - 1, X_train_2d[:, 0].max() + 1
+    y_min, y_max = X_train_2d[:, 1].min() - 1, X_train_2d[:, 1].max() + 1
 
-fig, ax = plt.subplots()
-ax.contourf(xx, yy, Z, alpha=0.2)
-ax.scatter(
-    X_train_2d[:, 0],
-    X_train_2d[:, 1],
-    c=y_train,
-    edgecolor="k",
-    s=30
-)
-
-# -----------------------------
-# Hyperplane + margins (Linear only)
-# -----------------------------
-if kernel == "linear":
-    Z_df = svm_vis.decision_function(np.c_[xx.ravel(), yy.ravel()])
-    Z_df = Z_df.reshape(xx.shape)
-
-    ax.contour(
-        xx, yy, Z_df,
-        levels=[-1, 0, 1],
-        linestyles=["--", "-", "--"],
-        linewidths=2
+    xx, yy = np.meshgrid(
+        np.linspace(x_min, x_max, 500),
+        np.linspace(y_min, y_max, 500)
     )
 
-ax.set_xlabel("PCA Feature 1")
-ax.set_ylabel("PCA Feature 2")
-ax.set_title(f"SVM Decision Boundary ({kernel.upper()} Kernel)")
+    # Plot decision regions
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    ax.contourf(xx, yy, Z, alpha=0.2, cmap=plt.cm.RdBu) # Using a diverging colormap
 
-st.pyplot(fig)
+    # Plot the hyperplane and margins
+    if hasattr(model, "decision_function"):
+        Z_df = model.decision_function(np.c_[xx.ravel(), yy.ravel()])
+        Z_df = Z_df.reshape(xx.shape)
+        # Plot decision boundary (hyperplane) at Z_df = 0
+        # Plot margins at Z_df = -1 and Z_df = 1
+        ax.contour(xx, yy, Z_df, colors='k', levels=[-1, 0, 1], alpha=0.6,
+                   linestyles=['--', '-', '--'], linewidths=2)
+    else:
+        # Fallback for models without decision_function, plot the 0.5 contour of predictions
+        ax.contour(xx, yy, Z, colors='k', levels=[0.5], linestyles=['-'], linewidths=2)
+
+    ax.scatter(X_test_2d[:, 0], X_test_2d[:, 1], c=y_test, s=30, edgecolor='k', cmap=plt.cm.RdBu) # Match cmap
+    ax.set_title(title)
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+
+# --- SIDE BY SIDE PLOT ---
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+plot_decision_boundary(svm_linear, axes[0], "Linear SVM with Hyperplane")
+plot_decision_boundary(svm_poly, axes[1], "Polynomial SVM (deg=3) with Hyperplane")
+plot_decision_boundary(svm_rbf, axes[2], "RBF SVM with Hyperplane")
+
+plt.tight_layout()
+plt.show()
